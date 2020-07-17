@@ -1,0 +1,10 @@
+pandas
+xlrd
+openpyxl
+argparse
+tqdm
+pillow
+matplotlib
+scipy
+streamlit
+plotly
