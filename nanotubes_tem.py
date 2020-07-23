@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+import numpy as np
 import plotly.express as px
 
 
@@ -35,9 +36,11 @@ def get_report():
 
 def show_table(nanotubes_df):
     st.subheader('Данные со снимков ПЭМ')
+    sample_num = st.selectbox('Выберите образец', ['*'] + nanotubes_df['Номер образца'].unique().tolist())
+    df = nanotubes_df.loc[nanotubes_df['Номер образца'] == sample_num] if sample_num != '*' else nanotubes_df
     per_page = 10
-    page = st.slider('Страница:', 1, len(nanotubes_df) // per_page, 1)
-    st.table(nanotubes_df.iloc[((page - 1) * per_page):(page * per_page), :18])
+    page = st.slider('Страница:', 1, len(df) // per_page, 1)
+    st.table(df.iloc[((page - 1) * per_page):(page * per_page), :18])
 
 
 def show_group_table(nanotubes_df):
@@ -56,23 +59,35 @@ def show_group_table(nanotubes_df):
     st.table(nanotubes_gb)
 
 
-def show_group_line(nanotubes_df, param):
+def show_group_line(nanotubes_df, param, filter={}):
     st.subheader(f'Изменение скорости роста в зависимости от параметра - {param}')
-    nanotubes_gb = nanotubes_df.groupby([param, 'Срез']).agg({
-        'Толщина кольца, нм': ['mean', 'std'],
-        'Скорость роста кольца, нм/мин': ['mean', 'std'],
-    })
-    nanotubes_gb.columns = [
-        'Толщина кольца, нм', 'Толщина кольца, стандартное отклонение',
-        'Скорость роста кольца, нм/мин', 'Скорость роста кольца, стандартное отклонение']
-    nanotubes_gb.reset_index(inplace=True)
+    df = nanotubes_df
+    if filter.keys():
+        filter_df = pd.Series(np.full((len(nanotubes_df)), True))
+        filter_str = ''
+        for col, val in filter.items():
+            filter_df = filter_df & (nanotubes_df[col] == val)
+            filter_str += f'{col}: {val}; '
+        df = nanotubes_df.loc[filter_df]
+        st.text(filter_str)
+    if len(df):
+        nanotubes_gb = df.groupby([param, 'Срез']).agg({
+            'Толщина кольца, нм': ['mean', 'std'],
+            'Скорость роста кольца, нм/мин': ['mean', 'std'],
+        })
+        nanotubes_gb.columns = [
+            'Толщина кольца, нм', 'Толщина кольца, стандартное отклонение',
+            'Скорость роста кольца, нм/мин', 'Скорость роста кольца, стандартное отклонение']
+        nanotubes_gb.reset_index(inplace=True)
 
-    fig = px.line(nanotubes_gb, x=param, y='Скорость роста кольца, нм/мин',
-                  error_y='Скорость роста кольца, стандартное отклонение',
-                  line_group='Срез', color='Срез',
-                  line_shape="spline", render_mode="svg")
-    st.plotly_chart(fig, use_container_width=True)
-    st.table(nanotubes_gb)
+        fig = px.line(nanotubes_gb, x=param, y='Скорость роста кольца, нм/мин',
+                      error_y='Скорость роста кольца, стандартное отклонение',
+                      line_group='Срез', color='Срез',
+                      line_shape="spline", render_mode="svg")
+        st.plotly_chart(fig, use_container_width=True)
+        st.table(nanotubes_gb)
+    else:
+        st.info('Данные удовлетворяющие фильтру отсутствуют')
 
 
 def show_points_scatter(nanotubes_df):
@@ -119,5 +134,24 @@ if __name__ == '__main__':
     show_points_parallel(nanotubes_df)
     show_group_table(nanotubes_df)
 
-    show_group_line(nanotubes_df, 'Время синтеза, мин')
-    show_group_line(nanotubes_df, 'Расход аргона, мл/мин')
+    show_group_line(nanotubes_df, 'Температура синтеза, C',
+                    {
+                        'Расход аргона, мл/мин': 200,
+                        'Расход смеси этанол/вода, мл/мин': 0.083,
+                    })
+    show_group_line(nanotubes_df, 'Расход аргона, мл/мин',
+                    {
+                        'Температура синтеза, C': 750,
+                        'Расход смеси этанол/вода, мл/мин': 0.083,
+                    })
+    show_group_line(nanotubes_df, 'Расход смеси этанол/вода, мл/мин',
+                    {
+                        'Температура синтеза, C': 750,
+                        'Расход аргона, мл/мин': 200,
+                    })
+    # show_group_line(nanotubes_df, 'Время синтеза, мин',
+    #                 {
+    #                     'Температура синтеза, C': 750,
+    #                     'Расход смеси этанол/вода, мл/мин': 0.083,
+    #                     'Расход аргона, мл/мин': 200
+    #                 })
