@@ -154,10 +154,7 @@ def show_points_scatter(nanotubes_df):
 
     fig = px.box(nanotubes_df, x='Номер образца', y='Скорость роста кольца, нм/мин',
                  color='Срез')
-    fig.update_layout(
-        xaxis_type='category', height=500,
-        # legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,)
-    )
+    fig.update_layout(xaxis_type='category', height=500)
     st.plotly_chart(fig, use_container_width=True)
 
 
