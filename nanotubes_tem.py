@@ -6,32 +6,52 @@ import plotly.express as px
 
 
 @st.cache
-def get_xy_df():
+def get_xy_df(report):
     response = requests.post('https://www.agoook.ru/nano/analysis/xy',
-                             json={'table': 'e2f77c4e1589aa599201c1eca6801731'})
+                             json={'table': report})
     json = response.json()
     meta_df = pd.DataFrame(json['records'])
     return meta_df
 
 
 @st.cache
-def get_xy_dict():
-    meta_df = get_xy_df()
+def get_xy_dict(report):
+    meta_df = get_xy_df(report)
     meta_dict = dict(zip(meta_df.id, meta_df.text))
     return meta_dict
 
 
 @st.cache
-def get_report():
-    response = requests.get('https://www.agoook.ru/nano/analysis/report?report=e2f77c4e1589aa599201c1eca6801731')
+def get_report(report):
+    response = requests.get(f'https://www.agoook.ru/nano/analysis/report?report={report}')
     json = response.json()
-    nanotubes_df = pd.DataFrame(json['records'])
+    df = pd.DataFrame(json['records']).iloc[:, :-5]
+    meta_dict = get_xy_dict(report)
+    df.rename(columns=meta_dict, inplace=True)
+    return df
+
+
+@st.cache
+def get_nanotubes_from_report():
+    nanotubes_df = get_report('e2f77c4e1589aa599201c1eca6801731')
     nanotubes_df[nanotubes_df.columns[2:18]] = nanotubes_df[nanotubes_df.columns[2:18]].astype(float)
-    meta_dict = get_xy_dict()
-    nanotubes_df.rename(columns=meta_dict, inplace=True)
     nanotubes_df = nanotubes_df.loc[nanotubes_df['Срез'].isin([0, .5])]
 
     return nanotubes_df
+
+
+@st.cache
+def get_model_from_report():
+    model_df = get_report('4b9d5e8039d37d4eb4adc29358745ae6')
+    # model_df[model_df.columns[2:18]] = model_df[model_df.columns[2:18]].astype(float)
+    # model_df = model_df.loc[model_df['Срез'].isin([0, .5])]
+
+    return model_df
+
+
+def show_model(model_df):
+    st.subheader('Данные моделирования')
+    st.dataframe(model_df)
 
 
 def show_table(nanotubes_df):
@@ -127,8 +147,10 @@ if __name__ == '__main__':
     st.title('Отчёт по мембранам')
     # st.sidebar.title('Настройки')
 
-    nanotubes_df = get_report()
+    nanotubes_df = get_nanotubes_from_report()
+    model_df = get_model_from_report()
 
+    show_model(model_df)
     show_table(nanotubes_df)
     show_points_scatter(nanotubes_df)
     show_points_parallel(nanotubes_df)
