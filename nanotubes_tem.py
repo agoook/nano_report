@@ -83,7 +83,7 @@ def show_group_line(nanotubes_df, model_df, param, filter={}):
     st.subheader(f'Изменение скорости роста в зависимости от параметра - {param}')
     df = nanotubes_df
     if filter.keys():
-        filter_df = pd.Series(np.full((len(nanotubes_df)), True))
+        filter_df = pd.Series(np.full((len(nanotubes_df)), True), index=nanotubes_df.index)
         model_filter_df = pd.Series(np.full((len(model_df)), True))
         filter_str = ''
         for col, val in filter.items():
